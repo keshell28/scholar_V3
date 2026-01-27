@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Users, Plus, TrendingUp } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Users, Plus, TrendingUp, BadgeCheck } from 'lucide-react';
 import { Community } from '../types';
 
 // Mock data
@@ -15,6 +15,8 @@ const mockCommunities: Community[] = [
     posts: [],
     adminId: '1',
     createdAt: new Date(),
+    isVerified: true,
+    verificationStatus: 'approved',
   },
   {
     id: '2',
@@ -26,6 +28,8 @@ const mockCommunities: Community[] = [
     posts: [],
     adminId: '1',
     createdAt: new Date(),
+    isVerified: true,
+    verificationStatus: 'approved',
   },
   {
     id: '3',
@@ -37,6 +41,8 @@ const mockCommunities: Community[] = [
     posts: [],
     adminId: '1',
     createdAt: new Date(),
+    isVerified: false,
+    verificationStatus: 'pending',
   },
   {
     id: '4',
@@ -48,6 +54,8 @@ const mockCommunities: Community[] = [
     posts: [],
     adminId: '1',
     createdAt: new Date(),
+    isVerified: true,
+    verificationStatus: 'approved',
   },
   {
     id: '5',
@@ -59,10 +67,13 @@ const mockCommunities: Community[] = [
     posts: [],
     adminId: '1',
     createdAt: new Date(),
+    isVerified: false,
+    verificationStatus: 'none',
   },
 ];
 
 export default function Communities() {
+  const navigate = useNavigate();
   const [communities] = useState(mockCommunities);
   const [filter, setFilter] = useState<'all' | 'country' | 'field' | 'culture'>('all');
 
@@ -83,7 +94,10 @@ export default function Communities() {
             </p>
           </div>
           
-          <button className="btn-primary flex items-center gap-2 text-sm sm:text-base w-full sm:w-auto justify-center">
+          <button 
+            onClick={() => navigate('/communities/create')}
+            className="btn-primary flex items-center gap-2 text-sm sm:text-base w-full sm:w-auto justify-center"
+          >
             <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
             Create Community
           </button>
@@ -128,9 +142,14 @@ export default function Communities() {
                   className="w-16 h-16 rounded-lg object-cover"
                 />
                 <div className="flex-1">
-                  <h3 className="font-bold text-lg text-gray-800 dark:text-white mb-1">
-                    {community.name}
-                  </h3>
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="font-bold text-lg text-gray-800 dark:text-white">
+                      {community.name}
+                    </h3>
+                    {community.isVerified && (
+                      <BadgeCheck className="h-5 w-5 text-blue-500 flex-shrink-0" title="Verified Community" />
+                    )}
+                  </div>
                   <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
                     <Users className="h-4 w-4 mr-1" />
                     {community.members.toLocaleString()} members

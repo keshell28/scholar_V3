@@ -5,6 +5,7 @@ import { useChatStore } from '../stores/chatStore';
 import { useNotificationStore } from '../stores/notificationStore';
 import { useSubscriptionStore } from '../stores/subscriptionStore';
 import NotificationDropdown from './NotificationDropdown';
+import ThemeToggle from './ThemeToggle';
 
 export default function Navigation() {
   const location = useLocation();
@@ -80,6 +81,8 @@ export default function Navigation() {
                 <span>Upgrade</span>
               </Link>
             )}
+            
+            <ThemeToggle />
             
             <Link to="/chat" className="hidden md:block relative p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">
               <MessageSquare className="h-5 w-5 text-gray-600 dark:text-gray-400" />

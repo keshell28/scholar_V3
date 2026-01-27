@@ -23,6 +23,8 @@ export interface Community {
   posts: Post[];
   adminId: string;
   createdAt: Date;
+  isVerified?: boolean;
+  verificationStatus?: 'none' | 'pending' | 'approved' | 'rejected';
 }
 
 export interface Post {
@@ -110,4 +112,59 @@ export interface ChatRoom {
   participants: User[];
   lastMessage?: Message;
   unreadCount: number;
+}
+
+export interface CulturalMusic {
+  id: string;
+  title: string;
+  artist?: string;
+  description: string;
+  genre: string;
+  image: string;
+  spotifyLink?: string;
+  culturalSignificance: string;
+  country: string;
+}
+
+export interface CulturalArt {
+  id: string;
+  title: string;
+  artist?: string;
+  description: string;
+  image: string;
+  category: string;
+  culturalInfo: string;
+  country: string;
+}
+
+export interface CulturalEvent {
+  id: string;
+  title: string;
+  date: string;
+  description: string;
+  traditions: string[];
+  image: string;
+  country: string;
+}
+
+export interface Proverb {
+  id: string;
+  shona?: string;
+  ndebele?: string;
+  language?: string;
+  original?: string;
+  english: string;
+  meaning: string;
+  usage: string;
+  country: string;
+}
+
+export interface LanguagePhrase {
+  shona?: string;
+  ndebele?: string;
+  language?: string;
+  original?: string;
+  english: string;
+  pronunciation: string;
+  country: string;
 }

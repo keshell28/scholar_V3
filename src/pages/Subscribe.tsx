@@ -5,12 +5,14 @@ import { StripeCheckout } from '../components/StripeCheckout';
 import { EcoCashPayment } from '../components/EcoCashPayment';
 import { useNavigate } from 'react-router-dom';
 import { analytics, EVENTS } from '../services/analytics';
+import { useToastStore } from '../stores/toastStore';
 
 export function Subscribe() {
   const navigate = useNavigate();
   const [selectedTier, setSelectedTier] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'ecocash' | null>(null);
   const { setSubscription, currentSubscription } = useSubscriptionStore();
+  const { success } = useToastStore();
 
   useEffect(() => {
     analytics.pageView('Subscribe Page');
@@ -42,7 +44,7 @@ export function Subscribe() {
     });
 
     // Show success and redirect
-    alert(`🎉 Welcome to ${tier.name}! Your subscription is now active.`);
+    success(`Your subscription is now active.`, `🎉 Welcome to ${tier.name}!`);
     navigate('/scholarships');
   };
 

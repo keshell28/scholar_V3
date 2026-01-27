@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Send, Search, MoreVertical, Phone, Video, ArrowLeft } from 'lucide-react';
+import { Send, Search, MoreVertical, Phone, Video, ArrowLeft, X, MapPin, GraduationCap, Mail, BookOpen, Heart, Calendar } from 'lucide-react';
 import { useChatStore } from '../stores/chatStore';
 import { useAuthStore } from '../stores/authStore';
 import { formatDistanceToNow } from 'date-fns';
@@ -16,6 +16,7 @@ export default function Chat() {
   
   const [messageInput, setMessageInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [showProfilePanel, setShowProfilePanel] = useState(false);
   const user = useAuthStore(state => state.user);
 
   useEffect(() => {
@@ -152,20 +153,25 @@ export default function Chat() {
                   <ArrowLeft className="h-5 w-5" />
                 </button>
                 
-                <img
-                  src={activeConversation.participant.profileImage}
-                  alt={activeConversation.participant.name}
-                  className="w-10 h-10 rounded-full"
-                />
-                
-                <div>
-                  <h2 className="font-semibold text-gray-900 dark:text-white">
-                    {activeConversation.participant.name}
-                  </h2>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    {activeConversation.participant.university}
-                  </p>
-                </div>
+                <button 
+                  onClick={() => setShowProfilePanel(true)}
+                  className="flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg p-2 -ml-2 transition-colors"
+                >
+                  <img
+                    src={activeConversation.participant.profileImage}
+                    alt={activeConversation.participant.name}
+                    className="w-10 h-10 rounded-full"
+                  />
+                  
+                  <div className="text-left">
+                    <h2 className="font-semibold text-gray-900 dark:text-white">
+                      {activeConversation.participant.name}
+                    </h2>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {activeConversation.participant.university}
+                    </p>
+                  </div>
+                </button>
               </div>
               
               <div className="flex items-center gap-2">
@@ -175,7 +181,10 @@ export default function Chat() {
                 <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">
                   <Video className="h-5 w-5 text-gray-600 dark:text-gray-400" />
                 </button>
-                <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">
+                <button 
+                  onClick={() => setShowProfilePanel(true)}
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                >
                   <MoreVertical className="h-5 w-5 text-gray-600 dark:text-gray-400" />
                 </button>
               </div>
@@ -278,6 +287,167 @@ export default function Chat() {
               </p>
             </div>
           </div>
+        )}
+
+        {/* Profile Panel - Slide in from right (like WhatsApp/Teams) */}
+        {showProfilePanel && activeConversation && (
+          <>
+            {/* Backdrop for mobile */}
+            <div 
+              className="fixed inset-0 bg-black/50 z-40 md:hidden"
+              onClick={() => setShowProfilePanel(false)}
+            />
+            
+            {/* Profile Panel */}
+            <div className={`
+              fixed md:absolute top-0 right-0 h-full w-full sm:w-96 
+              bg-white dark:bg-gray-900 shadow-xl z-50
+              transform transition-transform duration-300 ease-in-out
+              ${showProfilePanel ? 'translate-x-0' : 'translate-x-full'}
+              border-l border-gray-200 dark:border-gray-800
+              overflow-y-auto
+            `}>
+              {/* Panel Header */}
+              <div className="sticky top-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 p-4 flex items-center justify-between z-10">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Contact Info</h3>
+                <button 
+                  onClick={() => setShowProfilePanel(false)}
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                >
+                  <X className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+                </button>
+              </div>
+
+              {/* Profile Content */}
+              <div className="p-6">
+                {/* Profile Image and Name */}
+                <div className="flex flex-col items-center mb-6">
+                  <img
+                    src={activeConversation.participant.profileImage}
+                    alt={activeConversation.participant.name}
+                    className="w-32 h-32 rounded-full mb-4 ring-4 ring-gray-100 dark:ring-gray-800"
+                  />
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
+                    {activeConversation.participant.name}
+                  </h2>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    {activeConversation.participant.email}
+                  </p>
+                </div>
+
+                {/* Bio Section */}
+                {activeConversation.participant.bio && (
+                  <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">About</h4>
+                    <p className="text-sm text-gray-900 dark:text-white">{activeConversation.participant.bio}</p>
+                  </div>
+                )}
+
+                {/* Info Sections */}
+                <div className="space-y-4">
+                  {/* University */}
+                  <div className="flex items-start gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-colors">
+                    <div className="p-2 bg-[var(--color-primary-100)] dark:bg-[var(--color-primary-900)] rounded-lg">
+                      <GraduationCap className="h-5 w-5 text-[var(--color-primary-600)] dark:text-[var(--color-primary-400)]" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">University</p>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">
+                        {activeConversation.participant.university}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Field of Study */}
+                  <div className="flex items-start gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-colors">
+                    <div className="p-2 bg-[var(--color-secondary-100)] dark:bg-[var(--color-secondary-900)] rounded-lg">
+                      <BookOpen className="h-5 w-5 text-[var(--color-secondary-600)] dark:text-[var(--color-secondary-400)]" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Field of Study</p>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">
+                        {activeConversation.participant.fieldOfStudy}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        Year {activeConversation.participant.yearsOfStudy}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Location */}
+                  <div className="flex items-start gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-colors">
+                    <div className="p-2 bg-red-100 dark:bg-red-900 rounded-lg">
+                      <MapPin className="h-5 w-5 text-red-600 dark:text-red-400" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Location</p>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">
+                        {activeConversation.participant.city}, {activeConversation.participant.country}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Connection Type */}
+                  <div className="flex items-start gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-colors">
+                    <div className="p-2 bg-pink-100 dark:bg-pink-900 rounded-lg">
+                      <Heart className="h-5 w-5 text-pink-600 dark:text-pink-400" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Connection Type</p>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white capitalize">
+                        {activeConversation.participant.connectionType.replace('-', ' ')}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Email */}
+                  <div className="flex items-start gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-colors">
+                    <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
+                      <Mail className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Email</p>
+                      <a 
+                        href={`mailto:${activeConversation.participant.email}`}
+                        className="text-sm font-medium text-[var(--color-primary-600)] dark:text-[var(--color-primary-400)] hover:underline"
+                      >
+                        {activeConversation.participant.email}
+                      </a>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Interests */}
+                {activeConversation.participant.interests && activeConversation.participant.interests.length > 0 && (
+                  <div className="mt-6">
+                    <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-3">Interests</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {activeConversation.participant.interests.map((interest, idx) => (
+                        <span
+                          key={idx}
+                          className="px-3 py-1.5 bg-[var(--color-primary-100)] dark:bg-[var(--color-primary-900)] text-[var(--color-primary-700)] dark:text-[var(--color-primary-300)] text-sm rounded-full"
+                        >
+                          {interest}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Action Buttons */}
+                <div className="mt-8 space-y-3">
+                  <button className="w-full py-3 bg-[var(--color-primary-500)] text-white rounded-lg font-medium hover:bg-[var(--color-primary-600)] transition-colors flex items-center justify-center gap-2">
+                    <Phone className="h-5 w-5" />
+                    Audio Call
+                  </button>
+                  <button className="w-full py-3 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors flex items-center justify-center gap-2">
+                    <Video className="h-5 w-5" />
+                    Video Call
+                  </button>
+                </div>
+              </div>
+            </div>
+          </>
         )}
       </div>
     </div>
