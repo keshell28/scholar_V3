@@ -1,10 +1,15 @@
 import { useState, useEffect } from 'react';
-import { Search, Bookmark, BookmarkCheck, Target, TrendingUp, Crown, ExternalLink } from 'lucide-react';
+import { Search, Bookmark, BookmarkCheck, Target, TrendingUp, Crown, ExternalLink, Award } from 'lucide-react';
 import { useScholarshipStore } from '../stores/scholarshipStore';
 import { useSubscriptionStore } from '../stores/subscriptionStore';
 import { PremiumScholarshipFeatures } from '../components/PremiumScholarshipFeatures';
 import { useNavigate } from 'react-router-dom';
 import { analytics, EVENTS } from '../services/analytics';
+import { useDebounce } from '../hooks/useHooks';
+import { EmptyState } from '../components/EmptyState';
+import { SkeletonGrid } from '../components/LoadingSkeleton';
+import { motion } from 'framer-motion';
+import { staggerContainer, staggerItem } from '../utils/animations';
 
 export function Scholarships() {
   const navigate = useNavigate();
@@ -13,17 +18,23 @@ export function Scholarships() {
   const { isFeatureAvailable } = useSubscriptionStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedLevel, setSelectedLevel] = useState<string>('all');
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Debounce search to prevent excessive re-renders
+  const debouncedSearch = useDebounce(searchTerm, 300);
 
   const hasPremium = isFeatureAvailable('scholarship_matching');
 
   useEffect(() => {
     analytics.pageView('Scholarships Page');
+    // Simulate loading
+    setTimeout(() => setIsLoading(false), 500);
   }, []);
 
   // Filter scholarships based on subscription
   const filteredScholarships = scholarships.filter((scholarship) => {
-    const matchesSearch = scholarship.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (scholarship.organization?.toLowerCase() || '').includes(searchTerm.toLowerCase());
+    const matchesSearch = scholarship.title.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+      (scholarship.organization?.toLowerCase() || '').includes(debouncedSearch.toLowerCase());
     
     const matchesLevel = selectedLevel === 'all' || scholarship.level === selectedLevel;
     
@@ -97,12 +108,14 @@ export function Scholarships() {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800"
+            aria-label="Search scholarships"
           />
         </div>
         <select
           value={selectedLevel}
           onChange={(e) => setSelectedLevel(e.target.value)}
           className="px-4 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800"
+          aria-label="Filter by education level"
         >
           <option value="all">All Levels</option>
           <option value="undergraduate">Undergraduate</option>
@@ -111,8 +124,30 @@ export function Scholarships() {
         </select>
       </div>
 
+      {/* Loading State */}
+      {isLoading && <SkeletonGrid count={6} />}
+
+      {/* Empty State */}
+      {!isLoading && filteredScholarships.length === 0 && (
+        <EmptyState
+          icon={Award}
+          title="No scholarships found"
+          description={
+            debouncedSearch || selectedLevel !== 'all'
+              ? "Try adjusting your filters or search term to find more opportunities."
+              : "Check back later for new scholarship opportunities."
+          }
+          actionLabel="Clear Filters"
+          onAction={() => {
+            setSearchTerm('');
+            setSelectedLevel('all');
+          }}
+        />
+      )}
+
       {/* Scholarship Grid */}
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+      {!isLoading && filteredScholarships.length > 0 && (
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         {filteredScholarships.map((scholarship) => {
           const isSaved = savedScholarships.includes(scholarship.id);
           
@@ -153,7 +188,7 @@ export function Scholarships() {
                   {isSaved ? (
                     <BookmarkCheck className="w-5 h-5 text-yellow-500" />
                   ) : (
-                    <Bookmark className="w-5 h-5 text-gray-400" />
+                    <Bookmark className="w-5 h-5 text-gray-600 dark:text-gray-400" />
                   )}
                 </button>
               </div>
@@ -198,9 +233,10 @@ export function Scholarships() {
           );
         })}
       </div>
+      )}
 
       {/* Upgrade CTA for free users */}
-      {!hasPremium && premiumCount > 0 && (
+      {!isLoading && !hasPremium && premiumCount > 0 && (
         <div className="mt-8 text-center p-6 sm:p-8 bg-gradient-to-r from-yellow-50 to-yellow-100 dark:from-yellow-900/20 dark:to-yellow-800/20 rounded-lg border-2 border-yellow-400">
           <Crown className="w-12 h-12 text-yellow-600 mx-auto mb-4" />
           <h3 className="text-xl sm:text-2xl font-bold mb-2">Want to see all {premiumCount} premium scholarships?</h3>
@@ -226,22 +262,6 @@ export function Scholarships() {
             className="bg-yellow-500 text-gray-900 px-8 py-3 rounded-lg font-bold hover:bg-yellow-600 transition"
           >
             Upgrade Now - $9.99/month
-          </button>
-        </div>
-      )}
-
-      {/* Empty state */}
-      {filteredScholarships.length === 0 && (
-        <div className="text-center py-12">
-          <p className="text-gray-600 dark:text-gray-400 mb-4">No scholarships found</p>
-          <button
-            onClick={() => {
-              setSearchTerm('');
-              setSelectedLevel('all');
-            }}
-            className="text-green-600 hover:underline"
-          >
-            Clear filters
           </button>
         </div>
       )}

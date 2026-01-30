@@ -274,7 +274,7 @@ export default function CreateCommunity() {
                 <label className="w-48 h-48 flex flex-col items-center justify-center border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl cursor-pointer hover:border-[var(--color-primary-500)] transition-colors">
                   <Upload className="h-12 w-12 text-gray-400 mb-2" />
                   <span className="text-sm text-gray-600 dark:text-gray-400">Click to upload</span>
-                  <span className="text-xs text-gray-500 dark:text-gray-500 mt-1">PNG, JPG up to 5MB</span>
+                  <span className="text-xs text-gray-600 dark:text-gray-400 mt-1">PNG, JPG up to 5MB</span>
                   <input
                     type="file"
                     accept="image/*"
@@ -415,7 +415,7 @@ export default function CreateCommunity() {
                     </div>
                   ))}
                   {formData.guidelines.length > 3 && (
-                    <span className="text-sm text-gray-500 dark:text-gray-500">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">
                       +{formData.guidelines.length - 3} more guidelines
                     </span>
                   )}

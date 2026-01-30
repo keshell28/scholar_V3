@@ -2,6 +2,10 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Users, Plus, TrendingUp, BadgeCheck } from 'lucide-react';
 import { Community } from '../types';
+import { motion } from 'framer-motion';
+import { staggerContainer, staggerItem, cardHover } from '../utils/animations';
+import { SearchBar } from '../components/SearchBar';
+import { useDebounce } from '../hooks/useHooks';
 
 // Mock data
 const mockCommunities: Community[] = [
@@ -76,10 +80,20 @@ export default function Communities() {
   const navigate = useNavigate();
   const [communities] = useState(mockCommunities);
   const [filter, setFilter] = useState<'all' | 'country' | 'field' | 'culture'>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearch = useDebounce(searchQuery, 300);
 
-  const filteredCommunities = filter === 'all' 
-    ? communities 
-    : communities.filter(c => c.category === filter);
+  const filteredCommunities = communities.filter(community => {
+    // Filter by category
+    const matchesCategory = filter === 'all' || community.category === filter;
+    
+    // Filter by search query
+    const matchesSearch = !debouncedSearch || 
+      community.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+      community.description.toLowerCase().includes(debouncedSearch.toLowerCase());
+    
+    return matchesCategory && matchesSearch;
+  });
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-4 sm:py-6 md:py-8 px-3 sm:px-4">
@@ -103,8 +117,21 @@ export default function Communities() {
           </button>
         </div>
 
+        {/* Search Bar */}
+        <div className="mb-6">
+          <SearchBar
+            value={searchQuery}
+            onChange={setSearchQuery}
+            placeholder="Search communities by name or description..."
+            className="w-full"
+          />
+        </div>
+
         {/* Filters */}
-        <div className="flex flex-wrap gap-2 sm:gap-3 mb-6 sm:mb-8">
+        <motion.div 
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex flex-wrap gap-2 sm:gap-3 mb-6 sm:mb-8">
           <FilterButton
             active={filter === 'all'}
             onClick={() => setFilter('all')}
@@ -125,55 +152,77 @@ export default function Communities() {
             onClick={() => setFilter('culture')}
             label="Culture & Lifestyle"
           />
-        </div>
+        </motion.div>
 
         {/* Communities Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+        <motion.div 
+          variants={staggerContainer}
+          initial="initial"
+          animate="animate"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {filteredCommunities.map((community) => (
-            <Link
+            <motion.div
               key={community.id}
-              to={`/communities/${community.id}`}
-              className="card hover:shadow-xl transition-shadow"
+              variants={staggerItem}
+              whileHover={{ y: -8, scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              transition={{ duration: 0.2 }}
             >
-              <div className="flex items-start gap-4 mb-4">
-                <img
-                  src={community.image}
-                  alt={community.name}
-                  className="w-16 h-16 rounded-lg object-cover"
-                />
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h3 className="font-bold text-lg text-gray-800 dark:text-white">
-                      {community.name}
-                    </h3>
-                    {community.isVerified && (
-                      <BadgeCheck className="h-5 w-5 text-blue-500 flex-shrink-0" title="Verified Community" />
-                    )}
-                  </div>
-                  <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
-                    <Users className="h-4 w-4 mr-1" />
-                    {community.members.toLocaleString()} members
+              <Link
+                to={`/communities/${community.id}`}
+                className="card hover:shadow-xl transition-shadow block h-full"
+              >
+                <div className="flex items-start gap-4 mb-4">
+                  <img
+                    src={community.image}
+                    alt={community.name}
+                    className="w-16 h-16 rounded-lg object-cover"
+                  />
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="font-bold text-lg text-gray-800 dark:text-white">
+                        {community.name}
+                      </h3>
+                      {community.isVerified && (
+                        <BadgeCheck className="h-5 w-5 text-blue-500 flex-shrink-0" title="Verified Community" />
+                      )}
+                    </div>
+                    <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                      <Users className="h-4 w-4 mr-1" />
+                      {community.members.toLocaleString()} members
+                    </div>
                   </div>
                 </div>
-              </div>
-              
-              <p className="text-gray-600 dark:text-gray-400 mb-4">
-                {community.description}
-              </p>
-              
-              <div className="flex items-center text-sm text-[var(--color-primary-500)]">
-                <TrendingUp className="h-4 w-4 mr-1" />
-                Active community
-              </div>
-            </Link>
+                
+                <p className="text-gray-600 dark:text-gray-400 mb-4">
+                  {community.description}
+                </p>
+                
+                <div className="flex items-center text-sm text-[var(--color-primary-500)]">
+                  <TrendingUp className="h-4 w-4 mr-1" />
+                  Active community
+                </div>
+              </Link>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
 
         {filteredCommunities.length === 0 && (
           <div className="text-center py-16">
-            <p className="text-gray-600 dark:text-gray-400 text-lg">
-              No communities found in this category
+            <p className="text-gray-600 dark:text-gray-400 text-lg mb-4">
+              No communities found
             </p>
+            {(searchQuery || filter !== 'all') && (
+              <button
+                onClick={() => {
+                  setSearchQuery('');
+                  setFilter('all');
+                }}
+                className="text-green-600 dark:text-green-400 hover:underline"
+              >
+                Clear filters and search
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -189,7 +238,9 @@ interface FilterButtonProps {
 
 function FilterButton({ active, onClick, label }: FilterButtonProps) {
   return (
-    <button
+    <motion.button
+      whileHover={{ scale: 1.05 }}
+      whileTap={{ scale: 0.95 }}
       onClick={onClick}
       className={`px-3 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-colors ${
         active
@@ -198,6 +249,6 @@ function FilterButton({ active, onClick, label }: FilterButtonProps) {
       }`}
     >
       {label}
-    </button>
+    </motion.button>
   );
 }

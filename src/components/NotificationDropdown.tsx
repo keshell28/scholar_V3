@@ -89,7 +89,7 @@ export default function NotificationDropdown() {
         {notifications.length === 0 ? (
           <div className="p-8 text-center">
             <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-3">
-              <Check className="h-8 w-8 text-gray-400" />
+              <Check className="h-8 w-8 text-gray-600 dark:text-gray-400" />
             </div>
             <p className="text-gray-500 dark:text-gray-400">No notifications</p>
           </div>
@@ -127,7 +127,7 @@ export default function NotificationDropdown() {
                       }}
                       className="flex-shrink-0 p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors"
                     >
-                      <X className="h-3 w-3 text-gray-400" />
+                      <X className="h-3 w-3 text-gray-600 dark:text-gray-400" />
                     </button>
                   </div>
 
@@ -136,7 +136,7 @@ export default function NotificationDropdown() {
                   </p>
 
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-gray-500 dark:text-gray-500">
+                    <span className="text-xs text-gray-600 dark:text-gray-400">
                       {formatDistanceToNow(notification.createdAt, { addSuffix: true })}
                     </span>
 

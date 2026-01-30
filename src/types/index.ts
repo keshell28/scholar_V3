@@ -11,6 +11,9 @@ export interface User {
   connectionType: 'friendship' | 'mentorship' | 'study-buddy';
   interests: string[];
   yearsOfStudy: number;
+  isOnline?: boolean;
+  lastSeen?: Date;
+  matchScore?: number;
 }
 
 export interface Community {
@@ -114,6 +117,39 @@ export interface ChatRoom {
   unreadCount: number;
 }
 
+export interface StudyGroup {
+  id: string;
+  name: string;
+  subject: string;
+  description: string;
+  creatorId: string;
+  creatorName?: string;
+  creatorImage?: string;
+  members?: User[];
+  memberCount?: number;
+  maxMembers: number;
+  schedule?: string;
+  location?: string;
+  isOnline: boolean;
+  createdAt: Date;
+  nextSession?: Date;
+  tags: string[];
+  isMember?: boolean;
+  isCreator?: boolean;
+}
+
+export interface StudySession {
+  id: string;
+  groupId: string;
+  title: string;
+  date: Date;
+  duration: number; // in minutes
+  location?: string;
+  isOnline: boolean;
+  attendees: string[]; // user IDs
+  notes?: string;
+}
+
 export interface CulturalMusic {
   id: string;
   title: string;
@@ -167,4 +203,102 @@ export interface LanguagePhrase {
   english: string;
   pronunciation: string;
   country: string;
+}
+
+export interface Event {
+  id: string;
+  title: string;
+  description: string;
+  category: 'meetup' | 'party' | 'cultural' | 'academic' | 'sports' | 'workshop';
+  date: Date;
+  time: string;
+  location: string;
+  isOnline: boolean;
+  organizerId: string;
+  organizerName: string;
+  organizerImage: string;
+  image: string;
+  maxAttendees?: number;
+  attendees: string[]; // user IDs
+  interested: string[]; // user IDs
+  createdAt: Date;
+  tags: string[];
+  university?: string;
+  isPaid: boolean;
+  price?: number;
+}
+
+export interface MentorProfile {
+  id: string;
+  userId: string;
+  name: string;
+  profileImage: string;
+  university: string;
+  fieldOfStudy: string;
+  yearOfStudy: number;
+  isMentor: boolean;
+  bio: string;
+  expertise: string[];
+  availability: string;
+  mentees?: string[]; // user IDs
+  maxMentees?: number;
+  rating?: number;
+  reviewCount?: number;
+  achievements?: string[];
+}
+
+export interface MentorshipRequest {
+  id: string;
+  menteeId: string;
+  menteeName: string;
+  menteeImage: string;
+  mentorId: string;
+  status: 'pending' | 'accepted' | 'rejected';
+  message: string;
+  createdAt: Date;
+}
+
+export interface AlumniProfile {
+  id: string;
+  userId: string;
+  name: string;
+  profileImage: string;
+  university: string;
+  graduationYear: number;
+  degree: string;
+  fieldOfStudy: string;
+  currentCompany?: string;
+  currentPosition?: string;
+  location: string;
+  bio: string;
+  expertise: string[];
+  willingToMentor: boolean;
+  careerPath: string[];
+  achievements: string[];
+  linkedIn?: string;
+  email?: string;
+}
+
+export interface Story {
+  id: string;
+  userId: string;
+  userName: string;
+  userImage: string;
+  content: string;
+  image?: string;
+  backgroundColor?: string;
+  createdAt: Date;
+  expiresAt: Date;
+  views: string[]; // user IDs who viewed
+}
+
+export interface VideoCallSession {
+  id: string;
+  roomId: string;
+  participants: string[]; // user IDs
+  initiatorId: string;
+  startTime: Date;
+  endTime?: Date;
+  isActive: boolean;
+  type: 'audio' | 'video';
 }

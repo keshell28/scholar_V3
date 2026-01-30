@@ -1,6 +1,10 @@
 import { useState } from 'react';
 import { Clock, Users, Heart, Music, Palette, Calendar, BookOpen, Sparkles, Globe, Trophy, ChevronDown } from 'lucide-react';
 import { Recipe } from '../types';
+import { motion } from 'framer-motion';
+import { staggerContainer, staggerItem, cardHover } from '../utils/animations';
+import { SearchBar } from '../components/SearchBar';
+import { useDebounce } from '../hooks/useHooks';
 
 // Available Cultures
 const cultures = [
@@ -1002,6 +1006,8 @@ export default function Recipes() {
   const [activeTab, setActiveTab] = useState<CultureTab>('recipes');
   const [selectedCulture, setSelectedCulture] = useState('zimbabwe');
   const [showCultureDropdown, setShowCultureDropdown] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearch = useDebounce(searchQuery, 300);
 
   // Get recipes for selected culture
   const getRecipesForCulture = () => {
@@ -1027,6 +1033,18 @@ export default function Recipes() {
   const filteredProverbs = mockProverbs.filter(p => p.country === selectedCulture);
   const filteredPhrases = mockPhrases.filter(p => p.country === selectedCulture);
   const currentRecipes = getRecipesForCulture();
+
+  // Apply search filter to recipes
+  const searchFilteredRecipes = currentRecipes.filter(recipe => {
+    if (!debouncedSearch) return true;
+    const searchLower = debouncedSearch.toLowerCase();
+    return (
+      recipe.title.toLowerCase().includes(searchLower) ||
+      recipe.description.toLowerCase().includes(searchLower) ||
+      recipe.category.toLowerCase().includes(searchLower) ||
+      recipe.ingredients.some(ing => ing.toLowerCase().includes(searchLower))
+    );
+  });
 
   const selectedCultureData = cultures.find(c => c.id === selectedCulture);
 
@@ -1056,7 +1074,7 @@ export default function Recipes() {
           <div className="relative">
             <button
               onClick={() => setShowCultureDropdown(!showCultureDropdown)}
-              className="flex items-center justify-between w-full px-4 sm:px-6 py-3 sm:py-4 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-secondary)] text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all hover:scale-[1.01] active:scale-[0.99]"
+              className="flex items-center justify-between w-full px-4 sm:px-6 py-3 sm:py-4 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-secondary)] text-gray-900 dark:text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all hover:scale-[1.01] active:scale-[0.99]"
             >
               <span className="flex items-center gap-2 sm:gap-3">
                 <Globe className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
@@ -1077,7 +1095,7 @@ export default function Recipes() {
                 <div className="absolute left-0 right-0 z-50 mt-2 sm:mt-3 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border-2 border-gray-200 dark:border-gray-600 overflow-hidden max-h-[70vh] overflow-y-auto">
                   {/* Africa Section */}
                   <div className="sticky top-0 z-10 px-3 sm:px-4 py-2 bg-gradient-to-r from-orange-500 to-yellow-500 dark:from-orange-600 dark:to-yellow-600">
-                    <span className="text-xs font-bold text-white uppercase tracking-wider">🌍 Africa</span>
+                    <span className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wider">🌍 Africa</span>
                   </div>
                   {cultures.filter(c => ['zimbabwe', 'south-africa', 'nigeria', 'kenya', 'ghana', 'ethiopia'].includes(c.id)).map((culture) => (
                     <button
@@ -1089,7 +1107,7 @@ export default function Recipes() {
                       className={`w-full px-4 sm:px-6 py-2.5 sm:py-3 text-left flex items-center gap-2 sm:gap-3 transition-all ${
                         selectedCulture === culture.id 
                           ? 'bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-secondary)] text-white font-bold shadow-inner' 
-                          : 'text-gray-800 dark:text-gray-100 hover:bg-gradient-to-r hover:from-gray-100 hover:to-gray-50 dark:hover:from-gray-700 dark:hover:to-gray-650'
+                          : 'text-gray-900 dark:text-gray-100 hover:bg-gradient-to-r hover:from-gray-100 hover:to-gray-50 dark:hover:from-gray-700 dark:hover:to-gray-650'
                       }`}
                     >
                       <span className="text-xl sm:text-2xl flex-shrink-0">{culture.flag}</span>
@@ -1100,7 +1118,7 @@ export default function Recipes() {
 
                   {/* Asia Section */}
                   <div className="sticky top-0 z-10 px-3 sm:px-4 py-2 bg-gradient-to-r from-red-500 to-yellow-400 dark:from-red-600 dark:to-yellow-500 mt-1">
-                    <span className="text-xs font-bold text-white uppercase tracking-wider">🌏 Asia</span>
+                    <span className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wider">🌏 Asia</span>
                   </div>
                   {cultures.filter(c => ['china'].includes(c.id)).map((culture) => (
                     <button
@@ -1112,7 +1130,7 @@ export default function Recipes() {
                       className={`w-full px-4 sm:px-6 py-2.5 sm:py-3 text-left flex items-center gap-2 sm:gap-3 transition-all ${
                         selectedCulture === culture.id 
                           ? 'bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-secondary)] text-white font-bold shadow-inner' 
-                          : 'text-gray-800 dark:text-gray-100 hover:bg-gradient-to-r hover:from-gray-100 hover:to-gray-50 dark:hover:from-gray-700 dark:hover:to-gray-650'
+                          : 'text-gray-900 dark:text-gray-100 hover:bg-gradient-to-r hover:from-gray-100 hover:to-gray-50 dark:hover:from-gray-700 dark:hover:to-gray-650'
                       }`}
                     >
                       <span className="text-xl sm:text-2xl flex-shrink-0">{culture.flag}</span>
@@ -1123,7 +1141,7 @@ export default function Recipes() {
 
                   {/* Europe Section */}
                   <div className="sticky top-0 z-10 px-3 sm:px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-500 dark:from-blue-600 dark:to-indigo-600 mt-1">
-                    <span className="text-xs font-bold text-white uppercase tracking-wider">🇪🇺 Europe</span>
+                    <span className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wider">🇪🇺 Europe</span>
                   </div>
                   {cultures.filter(c => ['uk', 'france', 'germany', 'spain', 'italy'].includes(c.id)).map((culture) => (
                     <button
@@ -1135,7 +1153,7 @@ export default function Recipes() {
                       className={`w-full px-4 sm:px-6 py-2.5 sm:py-3 text-left flex items-center gap-2 sm:gap-3 transition-all ${
                         selectedCulture === culture.id 
                           ? 'bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-secondary)] text-white font-bold shadow-inner' 
-                          : 'text-gray-800 dark:text-gray-100 hover:bg-gradient-to-r hover:from-gray-100 hover:to-gray-50 dark:hover:from-gray-700 dark:hover:to-gray-650'
+                          : 'text-gray-900 dark:text-gray-100 hover:bg-gradient-to-r hover:from-gray-100 hover:to-gray-50 dark:hover:from-gray-700 dark:hover:to-gray-650'
                       }`}
                     >
                       <span className="text-xl sm:text-2xl flex-shrink-0">{culture.flag}</span>
@@ -1169,8 +1187,8 @@ export default function Recipes() {
                   onClick={() => setActiveTab(tab.id)}
                   className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-all ${
                     activeTab === tab.id
-                      ? 'bg-[var(--color-primary)] text-white shadow-lg'
-                      : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                      ? 'bg-[var(--color-primary)] text-gray-900 dark:text-white shadow-lg'
+                      : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                   }`}
                 >
                   <Icon className="h-4 w-4" />
@@ -1184,9 +1202,25 @@ export default function Recipes() {
         {/* Recipes Tab */}
         {activeTab === 'recipes' && (
           <>
-            {currentRecipes.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                {currentRecipes.map((recipe) => (
+            {/* Search Bar for Recipes */}
+            <div className="mb-6">
+              <SearchBar
+                value={searchQuery}
+                onChange={setSearchQuery}
+                placeholder="Search recipes by name, ingredient, or category..."
+                className="w-full"
+              />
+            </div>
+
+            {searchFilteredRecipes.length > 0 ? (
+              <>
+                {searchQuery && (
+                  <p className="mb-4 text-sm text-gray-600 dark:text-gray-400">
+                    Found {searchFilteredRecipes.length} recipe{searchFilteredRecipes.length !== 1 ? 's' : ''}
+                  </p>
+                )}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                  {searchFilteredRecipes.map((recipe) => (
             <div
               key={recipe.id}
               onClick={() => setSelectedRecipe(recipe)}
@@ -1225,13 +1259,24 @@ export default function Recipes() {
               </div>
             </div>
           ))}
-            </div>
+                </div>
+              </>
             ) : (
               <div className="card text-center py-12">
                 <p className="text-gray-600 dark:text-gray-400 mb-4">
-                  No recipes available yet for {selectedCultureData?.name}
+                  {searchQuery 
+                    ? `No recipes found matching "${searchQuery}"`
+                    : `No recipes available yet for ${selectedCultureData?.name}`}
                 </p>
-                <button className="btn-primary">
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="text-green-600 dark:text-green-400 hover:underline"
+                  >
+                    Clear search
+                  </button>
+                )}
+                <button className="btn-primary mt-4">
                   Be the First to Share a Recipe!
                 </button>
               </div>
@@ -1281,7 +1326,7 @@ export default function Recipes() {
           </div>
             ) : (
               <div className="card text-center py-12">
-                <Music className="h-16 w-16 mx-auto mb-4 text-gray-400" />
+                <Music className="h-16 w-16 mx-auto mb-4 text-gray-600 dark:text-gray-400" />
                 <p className="text-gray-600 dark:text-gray-400 mb-4">
                   No music available yet for {selectedCultureData?.name}
                 </p>
@@ -1329,7 +1374,7 @@ export default function Recipes() {
           </div>
             ) : (
               <div className="card text-center py-12">
-                <Palette className="h-16 w-16 mx-auto mb-4 text-gray-400" />
+                <Palette className="h-16 w-16 mx-auto mb-4 text-gray-600 dark:text-gray-400" />
                 <p className="text-gray-600 dark:text-gray-400 mb-4">
                   No art & crafts available yet for {selectedCultureData?.name}
                 </p>
@@ -1380,7 +1425,7 @@ export default function Recipes() {
           </div>
             ) : (
               <div className="card text-center py-12">
-                <Calendar className="h-16 w-16 mx-auto mb-4 text-gray-400" />
+                <Calendar className="h-16 w-16 mx-auto mb-4 text-gray-600 dark:text-gray-400" />
                 <p className="text-gray-600 dark:text-gray-400 mb-4">
                   No cultural events available yet for {selectedCultureData?.name}
                 </p>
@@ -1415,7 +1460,7 @@ export default function Recipes() {
                       <h3 className="text-lg font-bold text-gray-900 dark:text-white">
                         {phrase.shona || phrase.ndebele || phrase.original}
                       </h3>
-                      <span className="text-xs bg-[var(--color-primary)] text-white px-2 py-1 rounded font-semibold">
+                      <span className="text-xs bg-[var(--color-primary)] text-gray-900 dark:text-white px-2 py-1 rounded font-semibold">
                         {phrase.shona ? 'Shona' : phrase.ndebele ? 'Ndebele' : phrase.language}
                       </span>
                     </div>
@@ -1430,7 +1475,7 @@ export default function Recipes() {
               </div>
             </div>
 
-            <div className="card bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-secondary)] text-white">
+            <div className="card bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-secondary)] text-gray-900 dark:text-white">
               <h3 className="text-xl font-bold mb-3">🎯 Practice Daily!</h3>
               <p className="mb-4">
                 Try using one new phrase each day when talking to fellow students.
@@ -1442,7 +1487,7 @@ export default function Recipes() {
           </div>
             ) : (
               <div className="card text-center py-12">
-                <BookOpen className="h-16 w-16 mx-auto mb-4 text-gray-400" />
+                <BookOpen className="h-16 w-16 mx-auto mb-4 text-gray-600 dark:text-gray-400" />
                 <p className="text-gray-600 dark:text-gray-400 mb-4">
                   No language phrases available yet for {selectedCultureData?.name}
                 </p>
@@ -1475,7 +1520,7 @@ export default function Recipes() {
                   className="card bg-white dark:bg-gray-800 hover:shadow-xl transition-shadow"
                 >
                   <div className="flex items-start gap-4">
-                    <div className="bg-[var(--color-primary)] text-white p-3 rounded-full flex-shrink-0">
+                    <div className="bg-[var(--color-primary)] text-gray-900 dark:text-white p-3 rounded-full flex-shrink-0">
                       <Trophy className="h-6 w-6" />
                     </div>
                     <div className="flex-1">
@@ -1508,7 +1553,7 @@ export default function Recipes() {
             ))}
             </div>
 
-            <div className="card bg-gradient-to-r from-[var(--color-secondary)] to-[var(--color-primary)] text-white">
+            <div className="card bg-gradient-to-r from-[var(--color-secondary)] to-[var(--color-primary)] text-gray-900 dark:text-white">
               <h3 className="text-xl font-bold mb-3">💬 Share Your Proverbs</h3>
               <p className="mb-4">
                 Know a proverb that's not listed? Share it with the community!
@@ -1520,7 +1565,7 @@ export default function Recipes() {
           </div>
             ) : (
               <div className="card text-center py-12">
-                <Sparkles className="h-16 w-16 mx-auto mb-4 text-gray-400" />
+                <Sparkles className="h-16 w-16 mx-auto mb-4 text-gray-600 dark:text-gray-400" />
                 <p className="text-gray-600 dark:text-gray-400 mb-4">
                   No proverbs available yet for {selectedCultureData?.name}
                 </p>

@@ -2,6 +2,9 @@ import { ThumbsUp, MessageSquare, Share2, Send, Briefcase, GraduationCap, Trendi
 import { Link } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { useSubscriptionStore } from '../stores/subscriptionStore';
+import Stories from '../components/Stories';
+import { motion } from 'framer-motion';
+import { staggerContainer, staggerItem, cardHover, buttonTap } from '../utils/animations';
 
 // Mock feed data - LinkedIn style
 const feedPosts = [
@@ -76,7 +79,12 @@ export default function Home() {
         {/* Premium Upgrade Banner */}
         {!isPremium && (
           <Link to="/subscribe" className="block mb-4">
-            <div className="bg-gradient-to-r from-yellow-400 to-yellow-600 rounded-lg p-4 text-gray-900 hover:from-yellow-500 hover:to-yellow-700 transition cursor-pointer">
+            <motion.div 
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              whileHover={{ scale: 1.02, y: -2 }}
+              transition={{ duration: 0.3 }}
+              className="bg-gradient-to-r from-yellow-400 to-yellow-600 rounded-lg p-4 text-gray-900 hover:from-yellow-500 hover:to-yellow-700 transition cursor-pointer">
               <div className="flex items-center justify-between flex-wrap gap-3">
                 <div className="flex items-center gap-3">
                   <Crown className="w-8 h-8" />
@@ -89,7 +97,7 @@ export default function Home() {
                   Upgrade Now
                 </button>
               </div>
-            </div>
+            </motion.div>
           </Link>
         )}
 
@@ -143,6 +151,9 @@ export default function Home() {
 
           {/* Main Feed */}
           <div className="lg:col-span-6 space-y-4 lg:overflow-y-auto lg:h-full scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+            {/* Stories */}
+            <Stories />
+            
             {/* Create Post */}
             <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-3 sm:p-4">
               <div className="flex gap-2 sm:gap-3">
@@ -158,8 +169,18 @@ export default function Home() {
             </div>
 
             {/* Feed Posts */}
-            {feedPosts.map((post) => (
-              <article key={post.id} className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800">
+            <motion.div
+              variants={staggerContainer}
+              initial="initial"
+              animate="animate"
+            >
+              {feedPosts.map((post, index) => (
+                <motion.article 
+                  key={post.id} 
+                  variants={staggerItem}
+                  whileHover={{ y: -4 }}
+                  transition={{ duration: 0.2 }}
+                  className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 mb-4">
                 {/* Post Header */}
                 <div className="p-4">
                   <div className="flex gap-3">
@@ -174,7 +195,7 @@ export default function Home() {
                       </Link>
                       {post.title && <p className="text-sm text-gray-600 dark:text-gray-400">{post.title}</p>}
                       {post.university && <p className="text-sm text-gray-600 dark:text-gray-400">{post.university}</p>}
-                      <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">{post.time} • 🌍</p>
+                      <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">{post.time} • 🌍</p>
                     </div>
                   </div>
 
@@ -184,34 +205,35 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* Post Actions */}
-                <div className="border-t border-gray-200 dark:border-gray-800">
-                  <div className="px-4 py-2 flex items-center justify-between text-xs text-gray-600 dark:text-gray-400">
-                    <span>{post.likes} likes</span>
-                    <span>{post.comments} comments · {post.shares} shares</span>
-                  </div>
-                </div>
-
                 <div className="border-t border-gray-200 dark:border-gray-800 px-2 sm:px-4 py-2 flex items-center justify-around">
-                  <button className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors text-gray-600 dark:text-gray-400">
+                  <motion.button 
+                    whileTap={{ scale: 0.95 }}
+                    className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors text-gray-600 dark:text-gray-400">
                     <ThumbsUp className="h-4 w-4 sm:h-5 sm:w-5" />
                     <span className="text-xs sm:text-sm font-medium hidden sm:inline">Like</span>
-                  </button>
-                  <button className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors text-gray-600 dark:text-gray-400">
+                  </motion.button>
+                  <motion.button 
+                    whileTap={{ scale: 0.95 }}
+                    className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors text-gray-600 dark:text-gray-400">
                     <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5" />
                     <span className="text-xs sm:text-sm font-medium hidden sm:inline">Comment</span>
-                  </button>
-                  <button className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors text-gray-600 dark:text-gray-400">
+                  </motion.button>
+                  <motion.button 
+                    whileTap={{ scale: 0.95 }}
+                    className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors text-gray-600 dark:text-gray-400">
                     <Share2 className="h-4 w-4 sm:h-5 sm:w-5" />
                     <span className="text-xs sm:text-sm font-medium hidden sm:inline">Share</span>
-                  </button>
-                  <button className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors text-gray-600 dark:text-gray-400">
+                  </motion.button>
+                  <motion.button 
+                    whileTap={{ scale: 0.95 }}
+                    className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors text-gray-600 dark:text-gray-400">
                     <Send className="h-4 w-4 sm:h-5 sm:w-5" />
                     <span className="text-xs sm:text-sm font-medium hidden sm:inline">Send</span>
-                  </button>
+                  </motion.button>
                 </div>
-              </article>
+              </motion.article>
             ))}
+            </motion.div>
           </div>
 
           {/* Right Sidebar */}
@@ -232,7 +254,7 @@ export default function Home() {
                         {connection.name}
                       </Link>
                       <p className="text-xs text-gray-600 dark:text-gray-400 truncate">{connection.title}</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-500 truncate">{connection.university}</p>
+                      <p className="text-xs text-gray-600 dark:text-gray-400 truncate">{connection.university}</p>
                       <button className="mt-2 px-4 py-1 border border-[var(--color-primary-500)] text-[var(--color-primary-500)] rounded-full text-sm font-semibold hover:bg-[var(--color-primary-50)] dark:hover:bg-green-950 transition-colors">
                         Connect
                       </button>
@@ -248,15 +270,15 @@ export default function Home() {
               <div className="space-y-3">
                 <div>
                   <p className="text-sm font-semibold text-gray-900 dark:text-white">#ZimStudentsAbroad</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-500">2,345 posts</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">2,345 posts</p>
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-gray-900 dark:text-white">#ScholarshipOpportunities</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-500">1,892 posts</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">1,892 posts</p>
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-gray-900 dark:text-white">#StudyInChina</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-500">956 posts</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">956 posts</p>
                 </div>
               </div>
             </div>

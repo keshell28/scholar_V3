@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { Scholarship } from '../types';
+import { storage } from '../utils/storage';
 
 interface ScholarshipState {
   scholarships: Scholarship[];
@@ -14,6 +15,8 @@ interface ScholarshipState {
   unsaveScholarship: (id: string) => void;
   setFilters: (filters: Partial<ScholarshipState['filters']>) => void;
 }
+
+const SAVED_SCHOLARSHIPS_KEY = 'scholar_saved_scholarships';
 
 export const useScholarshipStore = create<ScholarshipState>((set) => ({
   scholarships: [
@@ -140,17 +143,21 @@ export const useScholarshipStore = create<ScholarshipState>((set) => ({
       competitiveness: 'high',
     },
   ],
-  savedScholarships: [],
+  savedScholarships: storage.get(SAVED_SCHOLARSHIPS_KEY, []),
   filters: {},
   setScholarships: (scholarships) => set({ scholarships }),
   saveScholarship: (id) =>
-    set((state) => ({
-      savedScholarships: [...state.savedScholarships, id],
-    })),
+    set((state) => {
+      const updated = [...state.savedScholarships, id];
+      storage.set(SAVED_SCHOLARSHIPS_KEY, updated);
+      return { savedScholarships: updated };
+    }),
   unsaveScholarship: (id) =>
-    set((state) => ({
-      savedScholarships: state.savedScholarships.filter((sid) => sid !== id),
-    })),
+    set((state) => {
+      const updated = state.savedScholarships.filter((sid) => sid !== id);
+      storage.set(SAVED_SCHOLARSHIPS_KEY, updated);
+      return { savedScholarships: updated };
+    }),
   setFilters: (filters) =>
     set((state) => ({ filters: { ...state.filters, ...filters } })),
 }));

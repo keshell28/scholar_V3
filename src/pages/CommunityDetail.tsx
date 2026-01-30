@@ -452,7 +452,7 @@ export default function CommunityDetail() {
                       </div>
                     </div>
                     <button className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700">
-                      <MoreVertical className="h-5 w-5 text-gray-400" />
+                      <MoreVertical className="h-5 w-5 text-gray-600 dark:text-gray-400" />
                     </button>
                   </div>
 

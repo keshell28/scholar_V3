@@ -102,7 +102,7 @@ export default function Notifications() {
                         {notification.message}
                       </p>
                       <div className="flex items-center gap-3">
-                        <span className="text-xs text-gray-500 dark:text-gray-500">
+                        <span className="text-xs text-gray-600 dark:text-gray-400">
                           {formatDistanceToNow(notification.createdAt, { addSuffix: true })}
                         </span>
                         <button
@@ -171,7 +171,7 @@ export default function Notifications() {
                         {notification.message}
                       </p>
                       <div className="flex items-center gap-3">
-                        <span className="text-xs text-gray-500 dark:text-gray-500">
+                        <span className="text-xs text-gray-600 dark:text-gray-400">
                           {formatDistanceToNow(notification.createdAt, { addSuffix: true })}
                         </span>
                         {notification.link && (
@@ -190,7 +190,7 @@ export default function Notifications() {
                       onClick={() => deleteNotification(notification.id)}
                       className="flex-shrink-0 p-2 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors self-start"
                     >
-                      <Trash2 className="h-4 w-4 text-gray-400" />
+                      <Trash2 className="h-4 w-4 text-gray-600 dark:text-gray-400" />
                     </button>
                   </div>
                 </div>
@@ -203,7 +203,7 @@ export default function Notifications() {
         {notifications.length === 0 && (
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-12 text-center">
             <div className="w-20 h-20 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Check className="h-10 w-10 text-gray-400" />
+              <Check className="h-10 w-10 text-gray-600 dark:text-gray-400" />
             </div>
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
               All caught up!

@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react';
-import { MapPin, GraduationCap, Calendar, Mail, Globe, Edit2, Check, X, Camera, Users, MessageSquare, Award } from 'lucide-react';
+import { MapPin, GraduationCap, Calendar, Mail, Globe, Edit2, Check, X, Camera, Users, MessageSquare, Award, LogOut } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
+import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import { COUNTRIES, FIELDS_OF_STUDY, getUniversitiesByCountry } from '../data/countries-universities';
 
 export default function Profile() {
-  const { user, updateProfile } = useAuthStore();
+  const { user, updateProfile, logout } = useAuthStore();
+  const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
   const [editedUser, setEditedUser] = useState(user);
 
@@ -27,6 +30,12 @@ export default function Profile() {
   const handleCancel = () => {
     setEditedUser(user);
     setIsEditing(false);
+  };
+
+  const handleLogout = () => {
+    logout();
+    toast.success('Logged out successfully');
+    navigate('/');
   };
 
   const stats = [
@@ -94,15 +103,64 @@ export default function Profile() {
                     type="text"
                     value={editedUser?.name || ''}
                     onChange={(e) => setEditedUser({ ...editedUser!, name: e.target.value })}
-                    className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white bg-gray-100 dark:bg-gray-700 px-3 py-2 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-500)]"
-                    placeholder="Your Name"
+                    className="w-full px-3 sm:px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[var(--color-primary-500)] dark:bg-gray-700 dark:text-white text-base sm:text-lg font-bold"
+                    placeholder="Name"
                   />
+                  
+                  <select
+                    value={editedUser?.country || ''}
+                    onChange={(e) => setEditedUser({ ...editedUser!, country: e.target.value, university: '' })}
+                    className="w-full px-3 sm:px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[var(--color-primary-500)] dark:bg-gray-700 dark:text-white"
+                  >
+                    <option value="">Select Country</option>
+                    {COUNTRIES.map((country) => (
+                      <option key={country.code} value={country.name}>
+                        {country.flag} {country.name}
+                      </option>
+                    ))}
+                  </select>
+
                   <input
                     type="text"
+                    value={editedUser?.city || ''}
+                    onChange={(e) => setEditedUser({ ...editedUser!, city: e.target.value })}
+                    className="w-full px-3 sm:px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[var(--color-primary-500)] dark:bg-gray-700 dark:text-white"
+                    placeholder="City"
+                  />
+                  
+                  <select
+                    value={editedUser?.university || ''}
+                    onChange={(e) => setEditedUser({ ...editedUser!, university: e.target.value })}
+                    disabled={!editedUser?.country}
+                    className="w-full px-3 sm:px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[var(--color-primary-500)] dark:bg-gray-700 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <option value="">{editedUser?.country ? 'Select University' : 'Select Country First'}</option>
+                    {editedUser?.country && getUniversitiesByCountry(editedUser.country).map((uni) => (
+                      <option key={uni} value={uni}>
+                        {uni}
+                      </option>
+                    ))}
+                  </select>
+                  
+                  <select
                     value={editedUser?.fieldOfStudy || ''}
                     onChange={(e) => setEditedUser({ ...editedUser!, fieldOfStudy: e.target.value })}
-                    className="text-base sm:text-lg text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 px-3 py-2 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-500)]"
-                    placeholder="Field of Study"
+                    className="w-full px-3 sm:px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[var(--color-primary-500)] dark:bg-gray-700 dark:text-white"
+                  >
+                    <option value="">Select Field of Study</option>
+                    {FIELDS_OF_STUDY.map((field) => (
+                      <option key={field} value={field}>
+                        {field}
+                      </option>
+                    ))}
+                  </select>
+                  
+                  <textarea
+                    value={editedUser?.bio || ''}
+                    onChange={(e) => setEditedUser({ ...editedUser!, bio: e.target.value })}
+                    rows={3}
+                    className="w-full px-3 sm:px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[var(--color-primary-500)] dark:bg-gray-700 dark:text-white resize-none"
+                    placeholder="Bio"
                   />
                 </div>
               ) : (
@@ -180,13 +238,22 @@ export default function Profile() {
                     </button>
                   </>
                 ) : (
-                  <button
-                    onClick={() => setIsEditing(true)}
-                    className="flex items-center justify-center gap-2 px-4 py-2 bg-[var(--color-primary-500)] hover:bg-[var(--color-primary-600)] text-white rounded-lg transition-colors text-sm sm:text-base"
-                  >
-                    <Edit2 className="h-4 w-4" />
-                    Edit Profile
-                  </button>
+                  <>
+                    <button
+                      onClick={() => setIsEditing(true)}
+                      className="flex items-center justify-center gap-2 px-4 py-2 bg-[var(--color-primary-500)] hover:bg-[var(--color-primary-600)] text-white rounded-lg transition-colors text-sm sm:text-base"
+                    >
+                      <Edit2 className="h-4 w-4" />
+                      Edit Profile
+                    </button>
+                    <button
+                      onClick={handleLogout}
+                      className="flex items-center justify-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors text-sm sm:text-base"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      Logout
+                    </button>
+                  </>
                 )}
               </div>
             </div>
@@ -250,7 +317,7 @@ export default function Profile() {
                     <p className="text-sm text-gray-600 dark:text-gray-400">
                       Bachelor of Science in {user.fieldOfStudy}
                     </p>
-                    <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-500 mt-1">
+                    <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mt-1">
                       <Calendar className="h-4 w-4" />
                       <span>Year {user.yearsOfStudy} • 2022 - 2026</span>
                     </div>
@@ -270,7 +337,7 @@ export default function Profile() {
                     <div className="w-2 h-2 bg-[var(--color-primary-500)] rounded-full mt-2" />
                     <div className="flex-1">
                       <p className="text-gray-900 dark:text-white">{activity.title}</p>
-                      <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                         {activity.time}
                       </p>
                     </div>
@@ -369,21 +436,21 @@ export default function Profile() {
                   href="#"
                   className="flex items-center gap-3 p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors"
                 >
-                  <Globe className="h-5 w-5 text-gray-400" />
+                  <Globe className="h-5 w-5 text-gray-600 dark:text-gray-400" />
                   <span className="text-gray-900 dark:text-white text-sm">LinkedIn</span>
                 </a>
                 <a
                   href="#"
                   className="flex items-center gap-3 p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors"
                 >
-                  <Globe className="h-5 w-5 text-gray-400" />
+                  <Globe className="h-5 w-5 text-gray-600 dark:text-gray-400" />
                   <span className="text-gray-900 dark:text-white text-sm">GitHub</span>
                 </a>
                 <a
                   href="#"
                   className="flex items-center gap-3 p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors"
                 >
-                  <Globe className="h-5 w-5 text-gray-400" />
+                  <Globe className="h-5 w-5 text-gray-600 dark:text-gray-400" />
                   <span className="text-gray-900 dark:text-white text-sm">Portfolio</span>
                 </a>
               </div>

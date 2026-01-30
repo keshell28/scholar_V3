@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Send, Search, MoreVertical, Phone, Video, ArrowLeft, X, MapPin, GraduationCap, Mail, BookOpen, Heart, Calendar } from 'lucide-react';
+import React, { useEffect, useState, useRef } from 'react';
+import { Send, Search, ArrowLeft, Circle } from 'lucide-react';
 import { useChatStore } from '../stores/chatStore';
 import { useAuthStore } from '../stores/authStore';
 import { formatDistanceToNow } from 'date-fns';
@@ -11,29 +11,50 @@ export default function Chat() {
     activeConversationId, 
     sendMessage, 
     setActiveConversation,
-    initializeMockData 
+    initializeSocket,
+    fetchConversations,
+    isConnected,
+    typingUsers,
+    startTyping,
+    stopTyping
   } = useChatStore();
   
   const [messageInput, setMessageInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [showProfilePanel, setShowProfilePanel] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const user = useAuthStore(state => state.user);
+  const token = useAuthStore(state => state.token);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Initialize chat on mount
   useEffect(() => {
-    // Initialize mock data on component mount
-    if (conversations.length === 0) {
-      initializeMockData();
+    if (token) {
+      console.log('🚀 Initializing chat with token');
+      initializeSocket(token);
+      fetchConversations();
     }
-  }, []);
+  }, [token]);
+
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, activeConversationId]);
 
   const activeConversation = conversations.find(c => c.id === activeConversationId);
   const activeMessages = activeConversationId ? messages[activeConversationId] || [] : [];
+  const typingUser = activeConversationId ? typingUsers[activeConversationId] : null;
 
   const handleSendMessage = () => {
-    if (messageInput.trim() && activeConversation) {
-      const participantId = activeConversation.participant.id;
-      sendMessage(participantId, messageInput.trim());
+    if (messageInput.trim() && activeConversation && activeConversationId) {
+      const receiverId = activeConversation.participant.id;
+      sendMessage(activeConversationId, receiverId, messageInput.trim());
       setMessageInput('');
+      
+      // Stop typing indicator
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+      stopTyping(activeConversationId, receiverId);
     }
   };
 
@@ -44,9 +65,32 @@ export default function Chat() {
     }
   };
 
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setMessageInput(e.target.value);
+    
+    // Send typing indicator
+    if (activeConversation && activeConversationId) {
+      if (e.target.value.trim()) {
+        startTyping(activeConversationId, activeConversation.participant.id);
+        
+        // Clear existing timeout
+        if (typingTimeoutRef.current) {
+          clearTimeout(typingTimeoutRef.current);
+        }
+        
+        // Stop typing after 2 seconds of inactivity
+        typingTimeoutRef.current = setTimeout(() => {
+          stopTyping(activeConversationId, activeConversation.participant.id);
+        }, 2000);
+      } else {
+        stopTyping(activeConversationId, activeConversation.participant.id);
+      }
+    }
+  };
+
   const filteredConversations = conversations.filter(conv =>
-    conv.participant.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    conv.participant.university.toLowerCase().includes(searchQuery.toLowerCase())
+    conv.participant.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    conv.participant.university?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
@@ -58,76 +102,95 @@ export default function Chat() {
       `}>
         {/* Header */}
         <div className="p-3 sm:p-4 border-b border-gray-200 dark:border-gray-800">
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-3 sm:mb-4">Messages</h1>
+          <div className="flex items-center justify-between mb-3 sm:mb-4">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Messages</h1>
+            {isConnected ? (
+              <div className="flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400">
+                <Circle className="h-2 w-2 fill-current" />
+                <span>Connected</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5 text-xs text-gray-400">
+                <Circle className="h-2 w-2" />
+                <span>Connecting...</span>
+              </div>
+            )}
+          </div>
           
           {/* Search */}
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 sm:h-4 sm:w-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
             <input
               type="text"
               placeholder="Search conversations..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 sm:pl-10 pr-4 py-2 bg-gray-100 dark:bg-gray-800 rounded-lg border-none text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-500)]"
+              className="w-full pl-10 pr-4 py-2 bg-gray-100 dark:bg-gray-800 rounded-lg border-none text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-500)] text-gray-900 dark:text-white placeholder-gray-500"
             />
           </div>
         </div>
 
-        {/* Conversations */}
-        <div className="flex-1 overflow-y-auto scrollbar-hide">
+        {/* Conversations List */}
+        <div className="flex-1 overflow-y-auto">
           {filteredConversations.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full p-8 text-center">
-              <p className="text-gray-500 dark:text-gray-400">No conversations found</p>
+              <p className="text-gray-500 dark:text-gray-400">
+                {conversations.length === 0 
+                  ? 'No conversations yet. Start chatting with other students!' 
+                  : 'No conversations found'}
+              </p>
             </div>
           ) : (
             filteredConversations.map((conversation) => (
               <button
                 key={conversation.id}
                 onClick={() => setActiveConversation(conversation.id)}
-                className={`w-full p-3 sm:p-4 flex items-start gap-2 sm:gap-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors border-b border-gray-100 dark:border-gray-800 ${
+                className={`w-full p-4 flex items-start gap-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors border-b border-gray-100 dark:border-gray-800 ${
                   activeConversationId === conversation.id ? 'bg-gray-50 dark:bg-gray-800' : ''
                 }`}
               >
-                <div className="relative">
+                <div className="relative flex-shrink-0">
                   <img
-                    src={conversation.participant.profileImage}
+                    src={conversation.participant.profileImage || 'https://i.pravatar.cc/150'}
                     alt={conversation.participant.name}
-                    className="w-10 h-10 sm:w-12 sm:h-12 rounded-full"
+                    className="w-12 h-12 rounded-full"
                   />
-                  <div className="absolute bottom-0 right-0 w-2.5 h-2.5 sm:w-3 sm:h-3 bg-[var(--color-primary-50)]0 border-2 border-white dark:border-gray-900 rounded-full" />
+                  {conversation.participant.isOnline && (
+                    <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white dark:border-gray-900 rounded-full" />
+                  )}
                 </div>
                 
                 <div className="flex-1 min-w-0 text-left">
                   <div className="flex items-center justify-between mb-1">
-                    <h3 className="font-semibold text-sm sm:text-base text-gray-900 dark:text-white truncate">
+                    <h3 className="font-semibold text-base text-gray-900 dark:text-white truncate">
                       {conversation.participant.name}
                     </h3>
                     {conversation.lastMessage && (
-                      <span className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 ml-2 flex-shrink-0">
-                        {formatDistanceToNow(conversation.lastMessage.createdAt, { addSuffix: true })}
+                      <span className="text-xs text-gray-500 dark:text-gray-400 ml-2 flex-shrink-0">
+                        {formatDistanceToNow(new Date(conversation.lastMessage.createdAt), { addSuffix: true })}
                       </span>
                     )}
                   </div>
                   
-                  <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-1 truncate">
-                    {conversation.participant.university}
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-1 truncate">
+                    {conversation.participant.university || 'Student'}
                   </p>
                   
                   {conversation.lastMessage && (
-                    <p className={`text-xs sm:text-sm truncate ${
+                    <p className={`text-sm truncate ${
                       conversation.unreadCount > 0
                         ? 'font-semibold text-gray-900 dark:text-white'
                         : 'text-gray-500 dark:text-gray-400'
                     }`}>
-                      {conversation.lastMessage.senderId === 'current-user' ? 'You: ' : ''}
+                      {conversation.lastMessage.senderId === user?.id ? 'You: ' : ''}
                       {conversation.lastMessage.content}
                     </p>
                   )}
                 </div>
                 
                 {conversation.unreadCount > 0 && (
-                  <div className="flex-shrink-0 w-4 h-4 sm:w-5 sm:h-5 bg-[var(--color-primary-500)] rounded-full flex items-center justify-center">
-                    <span className="text-[10px] sm:text-xs text-white font-bold">{conversation.unreadCount}</span>
+                  <div className="flex-shrink-0 w-5 h-5 bg-[var(--color-primary-500)] rounded-full flex items-center justify-center">
+                    <span className="text-xs text-white font-bold">{conversation.unreadCount}</span>
                   </div>
                 )}
               </button>
@@ -144,129 +207,92 @@ export default function Chat() {
         {activeConversation ? (
           <>
             {/* Chat Header */}
-            <div className="p-4 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => setActiveConversation(null)}
-                  className="md:hidden p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
-                >
-                  <ArrowLeft className="h-5 w-5" />
-                </button>
-                
-                <button 
-                  onClick={() => setShowProfilePanel(true)}
-                  className="flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg p-2 -ml-2 transition-colors"
-                >
-                  <img
-                    src={activeConversation.participant.profileImage}
-                    alt={activeConversation.participant.name}
-                    className="w-10 h-10 rounded-full"
-                  />
-                  
-                  <div className="text-left">
-                    <h2 className="font-semibold text-gray-900 dark:text-white">
-                      {activeConversation.participant.name}
-                    </h2>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      {activeConversation.participant.university}
-                    </p>
-                  </div>
-                </button>
-              </div>
+            <div className="p-4 border-b border-gray-200 dark:border-gray-800 flex items-center gap-3">
+              <button
+                onClick={() => setActiveConversation(null)}
+                className="md:hidden p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </button>
               
-              <div className="flex items-center gap-2">
-                <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">
-                  <Phone className="h-5 w-5 text-gray-600 dark:text-gray-400" />
-                </button>
-                <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">
-                  <Video className="h-5 w-5 text-gray-600 dark:text-gray-400" />
-                </button>
-                <button 
-                  onClick={() => setShowProfilePanel(true)}
-                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
-                >
-                  <MoreVertical className="h-5 w-5 text-gray-600 dark:text-gray-400" />
-                </button>
+              <img
+                src={activeConversation.participant.profileImage || 'https://i.pravatar.cc/150'}
+                alt={activeConversation.participant.name}
+                className="w-10 h-10 rounded-full"
+              />
+              
+              <div className="flex-1">
+                <h2 className="font-semibold text-gray-900 dark:text-white">
+                  {activeConversation.participant.name}
+                </h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  {activeConversation.participant.university || 'Student'}
+                </p>
               </div>
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-hide">
-              {activeMessages.map((message, index) => {
-                const isCurrentUser = message.senderId === 'current-user';
-                const showAvatar = index === 0 || activeMessages[index - 1].senderId !== message.senderId;
-
-                return (
-                  <div
-                    key={message.id}
-                    className={`flex gap-2 ${isCurrentUser ? 'justify-end' : 'justify-start'}`}
-                  >
-                    {!isCurrentUser && (
-                      <div className="flex-shrink-0">
-                        {showAvatar ? (
-                          <img
-                            src={activeConversation.participant.profileImage}
-                            alt={activeConversation.participant.name}
-                            className="w-8 h-8 rounded-full"
-                          />
-                        ) : (
-                          <div className="w-8" />
-                        )}
-                      </div>
-                    )}
-                    
-                    <div className={`flex flex-col ${isCurrentUser ? 'items-end' : 'items-start'} max-w-[70%]`}>
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              {activeMessages.length === 0 ? (
+                <div className="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">
+                  No messages yet. Start the conversation!
+                </div>
+              ) : (
+                activeMessages.map((message) => {
+                  const isOwn = message.senderId === user?.id;
+                  
+                  return (
+                    <div
+                      key={message.id}
+                      className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}
+                    >
                       <div
-                        className={`px-4 py-2 rounded-2xl ${
-                          isCurrentUser
-                            ? 'bg-[var(--color-primary-500)] text-white rounded-br-sm'
-                            : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-bl-sm'
+                        className={`max-w-[70%] rounded-2xl px-4 py-2 ${
+                          isOwn
+                            ? 'bg-[var(--color-primary-500)] text-white'
+                            : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white'
                         }`}
                       >
                         <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
+                        <p className={`text-xs mt-1 ${
+                          isOwn ? 'text-white/70' : 'text-gray-500 dark:text-gray-400'
+                        }`}>
+                          {formatDistanceToNow(new Date(message.createdAt), { addSuffix: true })}
+                        </p>
                       </div>
-                      <span className="text-xs text-gray-500 dark:text-gray-400 mt-1 px-2">
-                        {formatDistanceToNow(message.createdAt, { addSuffix: true })}
-                      </span>
                     </div>
-                    
-                    {isCurrentUser && (
-                      <div className="flex-shrink-0">
-                        {showAvatar && user ? (
-                          <img
-                            src={user.profileImage}
-                            alt={user.name}
-                            className="w-8 h-8 rounded-full"
-                          />
-                        ) : (
-                          <div className="w-8" />
-                        )}
-                      </div>
-                    )}
+                  );
+                })
+              )}
+              
+              {typingUser && (
+                <div className="flex justify-start">
+                  <div className="bg-gray-100 dark:bg-gray-800 rounded-2xl px-4 py-2">
+                    <p className="text-sm text-gray-500 dark:text-gray-400 italic">
+                      {typingUser} is typing...
+                    </p>
                   </div>
-                );
-              })}
+                </div>
+              )}
+              
+              <div ref={messagesEndRef} />
             </div>
 
             {/* Message Input */}
             <div className="p-4 border-t border-gray-200 dark:border-gray-800">
-              <div className="flex items-end gap-2">
-                <div className="flex-1 relative">
-                  <textarea
-                    value={messageInput}
-                    onChange={(e) => setMessageInput(e.target.value)}
-                    onKeyPress={handleKeyPress}
-                    placeholder="Type a message..."
-                    rows={1}
-                    className="w-full px-4 py-2 pr-12 bg-gray-100 dark:bg-gray-800 rounded-lg border-none resize-none focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-500)] max-h-32"
-                    style={{ minHeight: '40px' }}
-                  />
-                </div>
-                
+              <div className="flex gap-2">
+                <textarea
+                  value={messageInput}
+                  onChange={handleInputChange}
+                  onKeyPress={handleKeyPress}
+                  placeholder="Type a message..."
+                  rows={1}
+                  className="flex-1 px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded-lg border-none text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-500)] resize-none text-gray-900 dark:text-white placeholder-gray-500"
+                />
                 <button
                   onClick={handleSendMessage}
                   disabled={!messageInput.trim()}
-                  className="p-2 bg-[var(--color-primary-500)] text-white rounded-lg hover:bg-[var(--color-primary-600)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="p-2 bg-[var(--color-primary-500)] text-white rounded-lg hover:bg-[var(--color-primary-600)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   <Send className="h-5 w-5" />
                 </button>
@@ -274,180 +300,12 @@ export default function Chat() {
             </div>
           </>
         ) : (
-          <div className="flex-1 flex items-center justify-center">
+          <div className="flex-1 flex items-center justify-center text-gray-500 dark:text-gray-400">
             <div className="text-center">
-              <div className="w-24 h-24 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Send className="h-12 w-12 text-gray-400" />
-              </div>
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                Your Messages
-              </h2>
-              <p className="text-gray-500 dark:text-gray-400">
-                Select a conversation to start chatting
-              </p>
+              <p className="text-lg font-medium mb-2">Select a conversation</p>
+              <p className="text-sm">Choose a conversation from the list to start messaging</p>
             </div>
           </div>
-        )}
-
-        {/* Profile Panel - Slide in from right (like WhatsApp/Teams) */}
-        {showProfilePanel && activeConversation && (
-          <>
-            {/* Backdrop for mobile */}
-            <div 
-              className="fixed inset-0 bg-black/50 z-40 md:hidden"
-              onClick={() => setShowProfilePanel(false)}
-            />
-            
-            {/* Profile Panel */}
-            <div className={`
-              fixed md:absolute top-0 right-0 h-full w-full sm:w-96 
-              bg-white dark:bg-gray-900 shadow-xl z-50
-              transform transition-transform duration-300 ease-in-out
-              ${showProfilePanel ? 'translate-x-0' : 'translate-x-full'}
-              border-l border-gray-200 dark:border-gray-800
-              overflow-y-auto
-            `}>
-              {/* Panel Header */}
-              <div className="sticky top-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 p-4 flex items-center justify-between z-10">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Contact Info</h3>
-                <button 
-                  onClick={() => setShowProfilePanel(false)}
-                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
-                >
-                  <X className="h-5 w-5 text-gray-600 dark:text-gray-400" />
-                </button>
-              </div>
-
-              {/* Profile Content */}
-              <div className="p-6">
-                {/* Profile Image and Name */}
-                <div className="flex flex-col items-center mb-6">
-                  <img
-                    src={activeConversation.participant.profileImage}
-                    alt={activeConversation.participant.name}
-                    className="w-32 h-32 rounded-full mb-4 ring-4 ring-gray-100 dark:ring-gray-800"
-                  />
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
-                    {activeConversation.participant.name}
-                  </h2>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    {activeConversation.participant.email}
-                  </p>
-                </div>
-
-                {/* Bio Section */}
-                {activeConversation.participant.bio && (
-                  <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                    <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">About</h4>
-                    <p className="text-sm text-gray-900 dark:text-white">{activeConversation.participant.bio}</p>
-                  </div>
-                )}
-
-                {/* Info Sections */}
-                <div className="space-y-4">
-                  {/* University */}
-                  <div className="flex items-start gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-colors">
-                    <div className="p-2 bg-[var(--color-primary-100)] dark:bg-[var(--color-primary-900)] rounded-lg">
-                      <GraduationCap className="h-5 w-5 text-[var(--color-primary-600)] dark:text-[var(--color-primary-400)]" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">University</p>
-                      <p className="text-sm font-medium text-gray-900 dark:text-white">
-                        {activeConversation.participant.university}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Field of Study */}
-                  <div className="flex items-start gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-colors">
-                    <div className="p-2 bg-[var(--color-secondary-100)] dark:bg-[var(--color-secondary-900)] rounded-lg">
-                      <BookOpen className="h-5 w-5 text-[var(--color-secondary-600)] dark:text-[var(--color-secondary-400)]" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Field of Study</p>
-                      <p className="text-sm font-medium text-gray-900 dark:text-white">
-                        {activeConversation.participant.fieldOfStudy}
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        Year {activeConversation.participant.yearsOfStudy}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Location */}
-                  <div className="flex items-start gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-colors">
-                    <div className="p-2 bg-red-100 dark:bg-red-900 rounded-lg">
-                      <MapPin className="h-5 w-5 text-red-600 dark:text-red-400" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Location</p>
-                      <p className="text-sm font-medium text-gray-900 dark:text-white">
-                        {activeConversation.participant.city}, {activeConversation.participant.country}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Connection Type */}
-                  <div className="flex items-start gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-colors">
-                    <div className="p-2 bg-pink-100 dark:bg-pink-900 rounded-lg">
-                      <Heart className="h-5 w-5 text-pink-600 dark:text-pink-400" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Connection Type</p>
-                      <p className="text-sm font-medium text-gray-900 dark:text-white capitalize">
-                        {activeConversation.participant.connectionType.replace('-', ' ')}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Email */}
-                  <div className="flex items-start gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-colors">
-                    <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
-                      <Mail className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Email</p>
-                      <a 
-                        href={`mailto:${activeConversation.participant.email}`}
-                        className="text-sm font-medium text-[var(--color-primary-600)] dark:text-[var(--color-primary-400)] hover:underline"
-                      >
-                        {activeConversation.participant.email}
-                      </a>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Interests */}
-                {activeConversation.participant.interests && activeConversation.participant.interests.length > 0 && (
-                  <div className="mt-6">
-                    <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-3">Interests</h4>
-                    <div className="flex flex-wrap gap-2">
-                      {activeConversation.participant.interests.map((interest, idx) => (
-                        <span
-                          key={idx}
-                          className="px-3 py-1.5 bg-[var(--color-primary-100)] dark:bg-[var(--color-primary-900)] text-[var(--color-primary-700)] dark:text-[var(--color-primary-300)] text-sm rounded-full"
-                        >
-                          {interest}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Action Buttons */}
-                <div className="mt-8 space-y-3">
-                  <button className="w-full py-3 bg-[var(--color-primary-500)] text-white rounded-lg font-medium hover:bg-[var(--color-primary-600)] transition-colors flex items-center justify-center gap-2">
-                    <Phone className="h-5 w-5" />
-                    Audio Call
-                  </button>
-                  <button className="w-full py-3 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors flex items-center justify-center gap-2">
-                    <Video className="h-5 w-5" />
-                    Video Call
-                  </button>
-                </div>
-              </div>
-            </div>
-          </>
         )}
       </div>
     </div>

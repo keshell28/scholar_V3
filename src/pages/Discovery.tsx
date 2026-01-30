@@ -1,92 +1,128 @@
-import { useState } from 'react';
-import { Heart, X, MapPin, GraduationCap, Filter } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Heart, X, MapPin, GraduationCap, Filter, MessageCircle, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-
-// Mock data - replace with real data later
-const mockStudents = [
-  {
-    id: '1',
-    name: 'Tatenda Moyo',
-    age: 22,
-    university: 'Tsinghua University',
-    fieldOfStudy: 'Computer Science',
-    country: 'China',
-    city: 'Beijing',
-    bio: 'Love coding and making new friends! Looking for study buddies and someone to explore Beijing with.',
-    profileImage: 'https://ui-avatars.com/api/?name=Tatenda+Moyo&size=400',
-    connectionType: 'friendship',
-    interests: ['Technology', 'Hiking', 'Photography'],
-    yearsOfStudy: 3,
-  },
-  {
-    id: '2',
-    name: 'Rutendo Chikwava',
-    age: 24,
-    university: 'Harvard University',
-    fieldOfStudy: 'Medicine',
-    country: 'USA',
-    city: 'Boston',
-    bio: 'Med student from Harare. Happy to mentor pre-med students or just chat about life in Boston!',
-    profileImage: 'https://ui-avatars.com/api/?name=Rutendo+Chikwava&size=400',
-    connectionType: 'mentorship',
-    interests: ['Medicine', 'Running', 'Cooking'],
-    yearsOfStudy: 2,
-  },
-  {
-    id: '3',
-    name: 'Tinashe Ndlovu',
-    age: 21,
-    university: 'University of Cape Town',
-    fieldOfStudy: 'Engineering',
-    country: 'South Africa',
-    city: 'Cape Town',
-    bio: 'Engineering student who loves sadza and good vibes. Let\'s connect!',
-    profileImage: 'https://ui-avatars.com/api/?name=Tinashe+Ndlovu&size=400',
-    connectionType: 'study-buddy',
-    interests: ['Engineering', 'Music', 'Soccer'],
-    yearsOfStudy: 2,
-  },
-];
+import { useDiscoveryStore } from '../stores/discoveryStore';
+import { useChatStore } from '../stores/chatStore';
+import { useNavigate } from 'react-router-dom';
+import { useToastStore } from '../stores/toastStore';
+import { COUNTRIES } from '../data/countries-universities';
 
 export default function Discovery() {
-  const [students] = useState(mockStudents);
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const navigate = useNavigate();
+  const { 
+    users, 
+    currentIndex, 
+    isLoading,
+    fetchDiscoveryFeed, 
+    swipe,
+    setFilters,
+    nextUser
+  } = useDiscoveryStore();
+  
+  const { createConversation, setActiveConversation } = useChatStore();
+  const { success: showSuccessToast } = useToastStore();
+  
   const [showFilters, setShowFilters] = useState(false);
   const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null);
+  const [filterCountry, setFilterCountry] = useState<string>('all');
+  const [filterConnectionType, setFilterConnectionType] = useState<string>('all');
+  const [showMatchModal, setShowMatchModal] = useState(false);
+  const [matchedUser, setMatchedUser] = useState<any>(null);
 
-  const currentStudent = students[currentIndex];
+  // Fetch users on mount
+  useEffect(() => {
+    fetchDiscoveryFeed();
+  }, []);
 
-  const handleSwipe = (direction: 'like' | 'pass') => {
-    // Set swipe direction for animation
-    setSwipeDirection(direction === 'like' ? 'right' : 'left');
+  const currentStudent = users[currentIndex];
+
+  const handleSwipe = async (action: 'like' | 'pass') => {
+    if (!currentStudent) return;
     
-    if (direction === 'like') {
-      // Handle connection logic
-      console.log('Connected with:', currentStudent.name);
+    // Set swipe direction for animation
+    setSwipeDirection(action === 'like' ? 'right' : 'left');
+    
+    // Send swipe to backend
+    const result = await swipe(currentStudent.id, action);
+    
+    if (result?.isMatch) {
+      console.log('🎉 Match!', result);
+      setMatchedUser(currentStudent);
+      setShowMatchModal(true);
+      
+      showSuccessToast(`It's a match with ${currentStudent.name}! 🎉`);
     }
     
     // Wait for animation to complete before changing index
     setTimeout(() => {
-      if (currentIndex < students.length - 1) {
-        setCurrentIndex(currentIndex + 1);
+      if (currentIndex < users.length - 1) {
+        nextUser();
       } else {
-        // No more students
-        setCurrentIndex(0);
+        // No more users - fetch more
+        fetchDiscoveryFeed({ 
+          country: filterCountry !== 'all' ? filterCountry : undefined,
+          connectionType: filterConnectionType !== 'all' ? filterConnectionType : undefined
+        });
       }
       setSwipeDirection(null);
     }, 300);
   };
 
-  if (!currentStudent) {
+  const handleMessageMatch = async () => {
+    if (!matchedUser) return;
+    
+    // Create or get conversation
+    const conversation = await createConversation(matchedUser.id);
+    
+    if (conversation) {
+      setActiveConversation(conversation.id);
+      navigate('/chat');
+    }
+    
+    setShowMatchModal(false);
+  };
+
+  const applyFilters = () => {
+    setFilters({
+      country: filterCountry !== 'all' ? filterCountry : undefined,
+      connectionType: filterConnectionType !== 'all' ? filterConnectionType : undefined
+    });
+  };
+
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--color-primary-500)] mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">Loading students...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!currentStudent) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-center px-4">
+          <Sparkles className="h-16 w-16 text-[var(--color-primary-500)] mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-4">
             No more students nearby!
           </h2>
-          <p className="text-gray-600 dark:text-gray-400">
-            Check back later or adjust your filters
+          <p className="text-gray-600 dark:text-gray-400 mb-6">
+            {users.length === 0 
+              ? 'Check back later for new students'
+              : 'You\'ve seen all available students. Check back later or adjust your filters'}
           </p>
+          <button
+            onClick={() => {
+              setFilterCountry('all');
+              setFilterConnectionType('all');
+              fetchDiscoveryFeed();
+            }}
+            className="px-6 py-2 bg-[var(--color-primary-500)] text-white rounded-lg hover:bg-[var(--color-primary-600)] transition-colors"
+          >
+            Refresh Feed
+          </button>
         </div>
       </div>
     );
@@ -111,21 +147,49 @@ export default function Discovery() {
           <div className="mb-3 sm:mb-4 p-3 bg-white dark:bg-gray-800 rounded-xl shadow-lg">
             <h3 className="font-bold mb-2 text-gray-800 dark:text-white text-xs sm:text-sm">Filters</h3>
             <div className="space-y-2">
-              <select className="w-full px-2 sm:px-3 py-1.5 text-xs sm:text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
-                <option>All Countries</option>
-                <option>China</option>
-                <option>USA</option>
-                <option>UK</option>
-                <option>South Africa</option>
+              <select 
+                value={filterCountry}
+                onChange={(e) => setFilterCountry(e.target.value)}
+                className="w-full px-2 sm:px-3 py-1.5 text-xs sm:text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white"
+              >
+                <option value="all">All Countries</option>
+                {COUNTRIES.map((country) => (
+                  <option key={country.code} value={country.name}>
+                    {country.flag} {country.name}
+                  </option>
+                ))}
               </select>
               
-              <select className="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
-                <option>All Connection Types</option>
-                <option>Friendship</option>
-                <option>Mentorship</option>
-                <option>Study Buddy</option>
+              <select 
+                value={filterConnectionType}
+                onChange={(e) => setFilterConnectionType(e.target.value)}
+                className="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white"
+              >
+                <option value="all">All Connection Types</option>
+                <option value="friendship">Friendship</option>
+                <option value="mentorship">Mentorship</option>
+                <option value="study-buddy">Study Buddy</option>
               </select>
+              
+              <button
+                onClick={applyFilters}
+                className="w-full py-2 bg-[var(--color-primary-500)] text-white rounded-lg hover:bg-[var(--color-primary-600)] transition-colors text-sm font-medium"
+              >
+                Apply Filters
+              </button>
             </div>
+            {(filterCountry !== 'all' || filterConnectionType !== 'all') && (
+              <button
+                onClick={() => {
+                  setFilterCountry('all');
+                  setFilterConnectionType('all');
+                  fetchDiscoveryFeed();
+                }}
+                className="mt-2 w-full text-sm text-[var(--color-primary-600)] hover:underline"
+              >
+                Clear all filters
+              </button>
+            )}
           </div>
         )}
 
@@ -145,18 +209,26 @@ export default function Discovery() {
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden">
               <div className="relative h-48 sm:h-56">
                 <img
-                  src={currentStudent.profileImage}
+                  src={currentStudent.profileImage || 'https://i.pravatar.cc/400'}
                   alt={currentStudent.name}
                   className="w-full h-full object-cover"
                 />
-                <div className="absolute top-3 right-3 bg-[var(--color-primary-500)] text-white px-2.5 py-1 rounded-full text-xs font-semibold">
-                  {currentStudent.connectionType}
+                <div className="absolute top-3 left-3 flex gap-2">
+                  {currentStudent.matchScore !== undefined && currentStudent.matchScore > 0 && (
+                    <div className="bg-gradient-to-r from-green-500 to-green-600 text-white px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1 shadow-lg">
+                      <Sparkles className="h-3 w-3" />
+                      {currentStudent.matchScore}% Match
+                    </div>
+                  )}
+                </div>
+                <div className="absolute top-3 right-3 bg-[var(--color-primary-500)] text-white px-2.5 py-1 rounded-full text-xs font-semibold capitalize">
+                  {currentStudent.connectionType?.replace('-', ' ')}
                 </div>
               </div>
 
               <div className="p-4">
                 <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-2">
-                  {currentStudent.name}, {currentStudent.age}
+                  {currentStudent.name}
                 </h2>
                 
                 <div className="space-y-1.5 mb-3">
@@ -207,9 +279,54 @@ export default function Discovery() {
         </AnimatePresence>
 
         <div className="text-center mt-3 text-sm text-gray-600 dark:text-gray-400">
-          {currentIndex + 1} of {students.length} students
+          {currentIndex + 1} of {users.length} students
         </div>
       </div>
+
+      {/* Match Modal */}
+      {showMatchModal && matchedUser && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-sm w-full text-center"
+          >
+            <div className="mb-4">
+              <Sparkles className="h-16 w-16 text-[var(--color-primary-500)] mx-auto mb-2" />
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                It's a Match!
+              </h2>
+              <p className="text-gray-600 dark:text-gray-400">
+                You and {matchedUser.name} liked each other
+              </p>
+            </div>
+
+            <div className="flex items-center justify-center gap-4 mb-6">
+              <img
+                src={matchedUser.profileImage || 'https://i.pravatar.cc/150'}
+                alt={matchedUser.name}
+                className="w-20 h-20 rounded-full border-4 border-[var(--color-primary-500)]"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <button
+                onClick={handleMessageMatch}
+                className="w-full py-3 bg-[var(--color-primary-500)] text-white rounded-lg hover:bg-[var(--color-primary-600)] transition-colors font-medium flex items-center justify-center gap-2"
+              >
+                <MessageCircle className="h-5 w-5" />
+                Send Message
+              </button>
+              <button
+                onClick={() => setShowMatchModal(false)}
+                className="w-full py-3 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-medium"
+              >
+                Keep Swiping
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }

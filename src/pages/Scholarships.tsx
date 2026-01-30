@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Search, ExternalLink, Bookmark, BookmarkCheck } from 'lucide-react';
 import { Scholarship } from '../types';
+import { SearchBar } from '../components/SearchBar';
+import { useDebounce } from '../hooks/useHooks';
 
 // Mock data
 const mockScholarships: Scholarship[] = [
@@ -87,6 +89,7 @@ export default function Scholarships() {
   const [savedIds, setSavedIds] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCountry, setFilterCountry] = useState('all');
+  const debouncedSearch = useDebounce(searchQuery, 300);
 
   const toggleSave = (id: string) => {
     setSavedIds(prev =>
@@ -95,8 +98,8 @@ export default function Scholarships() {
   };
 
   const filteredScholarships = scholarships.filter(s => {
-    const matchesSearch = s.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         s.description.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = s.title.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+                         s.description.toLowerCase().includes(debouncedSearch.toLowerCase());
     const matchesCountry = filterCountry === 'all' || s.country === filterCountry;
     return matchesSearch && matchesCountry;
   });
@@ -116,21 +119,17 @@ export default function Scholarships() {
         {/* Search and Filters */}
         <div className="mb-6 sm:mb-8 space-y-3 sm:space-y-4">
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4 sm:h-5 sm:w-5" />
-              <input
-                type="text"
-                placeholder="Search scholarships..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 sm:pl-10 pr-4 py-2 sm:py-3 text-sm sm:text-base border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-800 dark:text-white"
-              />
-            </div>
+            <SearchBar
+              value={searchQuery}
+              onChange={setSearchQuery}
+              placeholder="Search scholarships by name or description..."
+              className="flex-1"
+            />
             
             <select
               value={filterCountry}
               onChange={(e) => setFilterCountry(e.target.value)}
-              className="px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-800 dark:text-white"
+              className="px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base border-2 border-gray-200 dark:border-gray-700 rounded-lg dark:bg-gray-800 dark:text-white"
             >
               <option value="all">All Countries</option>
               <option value="China">China</option>
@@ -139,6 +138,11 @@ export default function Scholarships() {
               <option value="Multiple Countries">Multiple Countries</option>
             </select>
           </div>
+          {filteredScholarships.length > 0 && (
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Showing {filteredScholarships.length} of {scholarships.length} scholarships
+            </p>
+          )}
         </div>
 
         {/* Scholarships List */}
@@ -179,7 +183,7 @@ export default function Scholarships() {
                   {savedIds.includes(scholarship.id) ? (
                     <BookmarkCheck className="h-6 w-6 text-[var(--color-primary-500)]" />
                   ) : (
-                    <Bookmark className="h-6 w-6 text-gray-400" />
+                    <Bookmark className="h-6 w-6 text-gray-600 dark:text-gray-400" />
                   )}
                 </button>
               </div>
@@ -225,9 +229,20 @@ export default function Scholarships() {
 
         {filteredScholarships.length === 0 && (
           <div className="text-center py-16">
-            <p className="text-gray-600 dark:text-gray-400 text-lg">
+            <p className="text-gray-600 dark:text-gray-400 text-lg mb-4">
               No scholarships found matching your criteria
             </p>
+            {(searchQuery || filterCountry !== 'all') && (
+              <button
+                onClick={() => {
+                  setSearchQuery('');
+                  setFilterCountry('all');
+                }}
+                className="text-green-600 dark:text-green-400 hover:underline"
+              >
+                Clear filters and search
+              </button>
+            )}
           </div>
         )}
       </div>
